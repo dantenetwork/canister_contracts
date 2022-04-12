@@ -1,18 +1,20 @@
 use ic_cdk::{
     api::{self},
-    export::{
-        candid::{CandidType, Deserialize},
-        Principal,
-    },
+    export::{candid::CandidType, Principal},
 };
 
 use ic_cdk_macros::*;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashSet, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 // use std::num::TryFromIntError;
-use std::result::Result as StdResult;
 use serde_cbor::Serializer;
+use sha2::{Digest, Sha256};
+use std::result::Result as StdResult;
+// use serde::ser::{Serialize, SerializeStruct, Serializer};
 
+// use serde::{Deserialize , ser::{Serialize, SerializeStruct, Serializer}};
+use serde::{Deserialize, Serialize};
+const ZEROID: u64 = 0u64;
 
 #[derive(CandidType, Deserialize, Default)]
 struct State {
@@ -21,7 +23,7 @@ struct State {
     // pending_message: BTreeMap<MessageKey, BTreeMap<u64, PendingMessage>>,
     pending_message: HashMap<String, BTreeMap<u64, HashMap<String, PendingMessage>>>,
     final_received_message_id: HashMap<String, HashMap<Principal, u64>>,
-    latest_message_id: HashMap<String, u32>,
+    latest_message_id: HashMap<String, u64>,
     validators: HashSet<Principal>,
 }
 
@@ -64,11 +66,17 @@ fn register_validator() -> Result<bool> {
 }
 
 #[update(name = "receiveMessage")]
-fn receive_message(id: u64, from_chain: String, to_chain: String, sender: String, signer: String, sqos: Sqos, content: Content) -> Result<bool> {
+fn receive_message(
+    id: u64,
+    from_chain: String,
+    to_chain: String,
+    sender: String,
+    signer: String,
+    sqos: Sqos,
+    content: Content,
+) -> Result<bool> {
     let caller = api::caller();
-    if !is_validator(&caller) {
-        return Err(Error::NotValidator);
-    } else {
+    if is_validator(&caller) {
         let msg = Message {
             from_chain: from_chain.clone(),
             to_chain: to_chain.clone(),
@@ -77,24 +85,77 @@ fn receive_message(id: u64, from_chain: String, to_chain: String, sender: String
             sqos,
             content: content.clone(),
         };
+        let hash = msg.to_hash();
+        STATE.with(|state| {
+            let mut state = state.borrow_mut();
+            // let state = &mut *state;
+            let latest_message_id = *state.latest_message_id.get(&from_chain).unwrap_or(&0u64);
+            if id == latest_message_id + 1 {
+                state
+                    .latest_message_id
+                    .insert(from_chain.clone(), id.clone());
+            }
+            if id > latest_message_id + 1 {
+                panic!("id not <= {}", latest_message_id + 1);
+            }
+            let final_received_message_id = *state
+                .final_received_message_id
+                .get(&from_chain)
+                .unwrap_or(&HashMap::new())
+                .get(&caller)
+                .unwrap_or(&0u64);
+            assert_ne!(final_received_message_id, id, "already received");
+            // 前面存在有节点未完成搬运时帮其搬运，得确保搬运消息存在，防止重复搬运
+            if id < final_received_message_id
+                || (id < latest_message_id + 1 && final_received_message_id == 0)
+            {
+                match state
+                    .pending_message
+                    .get(&from_chain)
+                    .unwrap_or(&BTreeMap::new())
+                    .get(&id)
+                {
+                    None => {
+                        panic!("this message has completed");
+                    }
+                    _ => {}
+                }
+            }
+            // if id > final_received_message_id {
+            //     state.final_received_message_id.insert(&count_key, &id);
+            // }
+        });
         Ok(true)
+    } else {
+        return Err(Error::NotValidator);
     }
 }
 
 #[query(name = "getLockers")]
 fn get_lockers() -> Vec<Principal> {
     STATE.with(|state| {
-        state.borrow().lockers.clone().into_iter().map(|locker| locker).collect()
+        state
+            .borrow()
+            .lockers
+            .clone()
+            .into_iter()
+            .map(|locker| locker)
+            .collect()
     })
 }
 
 #[query(name = "getCustodians")]
 fn get_custodians() -> Vec<Principal> {
     STATE.with(|state| {
-        state.borrow().custodians.clone().into_iter().map(|custodian| custodian).collect()
-    }) 
+        state
+            .borrow()
+            .custodians
+            .clone()
+            .into_iter()
+            .map(|custodian| custodian)
+            .collect()
+    })
 }
-
 
 fn is_validator(principal: &Principal) -> bool {
     STATE.with(|state| {
@@ -103,7 +164,6 @@ fn is_validator(principal: &Principal) -> bool {
         } else {
             false
         }
-        
     })
 }
 
@@ -119,10 +179,10 @@ enum Error {
 #[derive(CandidType, Deserialize)]
 struct PendingMessage {
     message: Message,
-    validators: Vec<Principal>
+    validators: Vec<Principal>,
 }
 
-#[derive(CandidType, Deserialize, Clone)]
+#[derive(CandidType, Deserialize, Serialize, Clone)]
 struct Message {
     from_chain: String,
     to_chain: String,
@@ -132,28 +192,37 @@ struct Message {
     content: Content,
 }
 
-// impl Message {
-//     pub fn to_hash(&self) -> String {
-//         Serializer::new(self);
-//     }
-// }
+impl Message {
+    pub fn to_hash(&self) -> String {
+        let mut data = vec![];
+        let mut serializer = Serializer::new(&mut data);
+        serializer.self_describe().unwrap();
+        self.serialize(&mut serializer).unwrap();
+        // let mut hasher = Sha256::new();
+        // hasher.update(data);
+        // let result = hasher.finalize();
 
-#[derive(CandidType, Deserialize, Clone)]
+        let hash = Sha256::digest(data);
+        format!("{:x}", hash)
+    }
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone)]
 struct Content {
     contract: String,
     action: String,
     data: String,
 }
 
+#[derive(CandidType, Deserialize, Serialize, Clone)]
+pub struct Sqos {
+    pub reveal: u8,
+}
+
 #[derive(CandidType, Eq, Ord, PartialEq, PartialOrd, Deserialize)]
 struct MessageKey {
     chain: String,
     id: u64,
-}
-
-#[derive(CandidType, Deserialize, Clone)]
-pub struct Sqos {
-    pub reveal: u8,
 }
 
 #[derive(CandidType, Eq, Ord, PartialEq, PartialOrd, Deserialize)]
