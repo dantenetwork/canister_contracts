@@ -1,0 +1,18 @@
+[package]
+name = "cross_chain"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+candid = "0.7.4"
+ic-cdk = "0.5"
+ic-cdk-macros = "0.5"
+bincode = "1.0"
+sha2 = "0.10.2"
+serde_cbor = "0.11.2"
+serde = { version = "1", features = ["derive"] }

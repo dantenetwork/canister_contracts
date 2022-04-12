@@ -1,0 +1,16 @@
+type ManageResult = variant {
+    Ok : bool;
+    Err : ApiError;
+};
+
+type ApiError = variant {
+    Unauthorized;
+    AlreadyRegisterLocker;
+    Other;
+};
+
+service : {
+    "registerLocker": () -> (ManageResult);
+    "getLockers": () -> (vec principal) query;
+    "getCustodians": () -> (vec principal) query;
+}
