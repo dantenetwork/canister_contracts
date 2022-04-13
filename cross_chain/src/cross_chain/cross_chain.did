@@ -5,12 +5,54 @@ type ManageResult = variant {
 
 type ApiError = variant {
     Unauthorized;
+    NotValidator;
     AlreadyRegisterLocker;
+    AlreadyRegisterValidator;
     Other;
+};
+
+type Message = record {
+    from_chain : text;
+    to_chain : text;
+    sender : text;
+    signer : text;
+    sqos : Sqos;
+    content : Content;
+};
+
+type Sqos = record {
+    reveal : nat8;
+};
+
+type Content = record {
+    contract : text;
+    action : text;
+    data : text;
+};
+
+type MapKey = variant {
+    ReceivedMessage : record {
+        chain_name : text;
+        id : nat64;
+    };
+    ValidatorFinalReceivedId : record {
+        chain_name : text;
+        validator : principal;
+    };
+};
+
+type PendingMessage = record {
+    message: Message;
+    validators: vec principal;
 };
 
 service : {
     "registerLocker": () -> (ManageResult);
+    "receiveMessage": (nat64, Message) -> (ManageResult);
+    "getPendingMessage": () -> (vec record {MapKey; vec record {text; PendingMessage}});
+    "getFinalReceivedMessageId": (text, principal) -> (nat64) query;
+    "getLatestMessageId": (text) -> (nat64) query;
     "getLockers": () -> (vec principal) query;
     "getCustodians": () -> (vec principal) query;
+    "getValidators": () -> (vec principal) query;
 }
