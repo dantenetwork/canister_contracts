@@ -4,22 +4,20 @@ use ic_cdk::{
 };
 
 use ic_cdk_macros::*;
-use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
-// use std::num::TryFromIntError;
+use serde::{Deserialize, Serialize};
 use serde_cbor::Serializer;
 use sha2::{Digest, Sha256};
+use std::cell::RefCell;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::result::Result as StdResult;
-// use serde::ser::{Serialize, SerializeStruct, Serializer};
-
-// use serde::{Deserialize , ser::{Serialize, SerializeStruct, Serializer}};
-use serde::{Deserialize, Serialize};
 
 #[derive(CandidType, Deserialize, Default)]
 struct State {
     custodians: HashSet<Principal>,
     lockers: HashSet<Principal>,
     pending_message: BTreeMap<MapKey, BTreeMap<String, PendingMessage>>,
+    sent_message: BTreeMap<MapKey, Message>,
+    sent_message_count: HashMap<String, u64>,
     // pending_message: HashMap<String, BTreeMap<u64, HashMap<String, PendingMessage>>>,
     // final_received_message_id: HashMap<String, HashMap<Principal, u64>>,
     final_received_message_id: BTreeMap<MapKey, u64>,
@@ -69,14 +67,6 @@ fn register_validator() -> Result<bool> {
 fn receive_message(id: u64, message: Message) -> Result<bool> {
     let validator = api::caller();
     if is_validator(&validator) {
-        // let msg = Message {
-        //     from_chain: from_chain.clone(),
-        //     to_chain: to_chain.clone(),
-        //     sender,
-        //     signer,
-        //     sqos,
-        //     content: content.clone(),
-        // };
         let final_received_key = MapKey::ValidatorFinalReceivedId {
             chain_name: message.from_chain.clone(),
             validator,
@@ -90,7 +80,9 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
                 .get(&message.from_chain)
                 .unwrap_or(&0u64);
             if id == latest_message_id + 1 {
-                state.latest_message_id.insert(message.from_chain.clone(), id);
+                state
+                    .latest_message_id
+                    .insert(message.from_chain.clone(), id);
             }
             if id > latest_message_id + 1 {
                 panic!("id not <= {}", latest_message_id + 1);
@@ -100,7 +92,7 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
                 .get(&final_received_key)
                 .unwrap_or(&0u64);
             assert_ne!(*final_received_message_id, id, "already received");
-            let received_key = MapKey::ReceivedMessage {
+            let received_key = MapKey::MessageId {
                 chain_name: message.from_chain.clone(),
                 id,
             };
@@ -116,16 +108,10 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
                 }
             }
             if id > *final_received_message_id {
-                state.final_received_message_id.insert(final_received_key, id);
+                state
+                    .final_received_message_id
+                    .insert(final_received_key, id);
             }
-            // match state.pending_message.get(&received_key) {
-            //     Some(map) => {
-            //         if let Some(msg) = map.get(&id) {
-            //             assert!(msg.validators.contains(caller))
-            //         }
-            //     }
-            // }
-
             match state.pending_message.get_mut(&received_key) {
                 Some(map) => {
                     if map.contains_key(&message_hash) {
@@ -162,26 +148,89 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
     }
 }
 
+#[update(name = "sendMessage")]
+fn send_message(to_chain: String, content: Content) {
+    let caller = api::caller();
+    // let signer = caller.to_text();
+    STATE.with(|state| {
+        let mut state = state.borrow_mut();
+        let id = state.sent_message_count.get(&to_chain).unwrap_or(&0u64) + 1;
+        // assert!(state.lockers.contains(&caller), "not register locker");
+        let message = Message {
+            from_chain: "InternetCompute".to_string(),
+            to_chain: to_chain.clone(),
+            sender: caller.to_text(),
+            signer: caller.to_text(),
+            sqos: Sqos { reveal: 1u8 },
+            content,
+        };
+        state.sent_message.insert(
+            MapKey::MessageId {
+                chain_name: to_chain.clone(),
+                id,
+            },
+            message,
+        );
+        state.sent_message_count.insert(to_chain, id);
+    })
+}
+
 #[query(name = "getPendingMessage")]
 fn get_pending_message() -> Vec<(MapKey, Vec<(String, PendingMessage)>)> {
     STATE.with(|state| {
-        state.borrow().pending_message.clone().into_iter().map(|(key, value)| {
-            (key, value.into_iter().map(|(msg_hash, group)| (msg_hash, group)).collect())
-        }).collect()
+        state
+            .borrow()
+            .pending_message
+            .clone()
+            .into_iter()
+            .map(|(key, value)| {
+                (
+                    key,
+                    value
+                        .into_iter()
+                        .map(|(msg_hash, group)| (msg_hash, group))
+                        .collect(),
+                )
+            })
+            .collect()
+    })
+}
+
+#[query(name = "getSentMessage")]
+fn get_sent_message() -> Vec<(MapKey, Message)> {
+    STATE.with(|state| {
+        state
+            .borrow()
+            .sent_message
+            .clone()
+            .into_iter()
+            .map(|result| result)
+            .collect()
     })
 }
 
 #[query(name = "getFinalReceivedMessageId")]
 fn get_final_received_message_id(chain_name: String, validator: Principal) -> u64 {
     STATE.with(|state| {
-        *state.borrow().final_received_message_id.get(&MapKey::ValidatorFinalReceivedId{chain_name, validator}).unwrap_or(&0u64)
+        *state
+            .borrow()
+            .final_received_message_id
+            .get(&MapKey::ValidatorFinalReceivedId {
+                chain_name,
+                validator,
+            })
+            .unwrap_or(&0u64)
     })
 }
 
 #[query(name = "getLatestMessageId")]
 fn get_latest_message_id(chain_name: String) -> u64 {
     STATE.with(|state| {
-        *state.borrow().latest_message_id.get(&chain_name).unwrap_or(&0u64)
+        *state
+            .borrow()
+            .latest_message_id
+            .get(&chain_name)
+            .unwrap_or(&0u64)
     })
 }
 
@@ -300,7 +349,7 @@ struct CountKey {
 
 #[derive(CandidType, Deserialize, Eq, Ord, PartialEq, PartialOrd, Clone)]
 enum MapKey {
-    ReceivedMessage {
+    MessageId {
         chain_name: String,
         id: u64,
     },
@@ -311,8 +360,3 @@ enum MapKey {
 }
 
 type Result<T = u128, E = Error> = StdResult<T, E>;
-// impl From<TryFromIntError> for Error {
-//     fn from(_: TryFromIntError) -> Self {
-//         Self::InvalidTokenId
-//     }
-// }
