@@ -1,0 +1,18 @@
+type Greeting = record {
+    title : text;
+    content : text;
+    date : text;
+};
+
+type OtherChainGreeting = record {
+    contract : text;
+    action_name : text;
+};
+ 
+service : {
+    "registerOtherChainGreeting": (text, text, text) -> ();
+    "receiveGreeting": (text, Greeting) -> ();
+    "setCrossChainCanister": (principal) -> ();
+    "getCrossChainCanister": () -> (opt principal) query;
+    "getGreetingData": (text) -> (opt Greeting) query;
+}
