@@ -31,7 +31,7 @@ type Content = record {
 };
 
 type MapKey = variant {
-    ReceivedMessage : record {
+    MessageId : record {
         chain_name : text;
         id : nat64;
     };
@@ -49,7 +49,9 @@ type PendingMessage = record {
 service : {
     "registerLocker": () -> (ManageResult);
     "receiveMessage": (nat64, Message) -> (ManageResult);
+    "sendMessage": (text, Content) -> ();
     "getPendingMessage": () -> (vec record {MapKey; vec record {text; PendingMessage}});
+    "getSentMessage": () -> (vec record {MapKey; Message});
     "getFinalReceivedMessageId": (text, principal) -> (nat64) query;
     "getLatestMessageId": (text) -> (nat64) query;
     "getLockers": () -> (vec principal) query;
