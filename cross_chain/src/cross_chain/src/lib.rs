@@ -197,11 +197,15 @@ fn get_pending_message() -> Vec<(MapKey, Vec<(String, PendingMessage)>)> {
 }
 
 #[query(name = "getSentMessage")]
-fn get_sent_message() -> Vec<(MapKey, Message)>{
+fn get_sent_message() -> Vec<(MapKey, Message)> {
     STATE.with(|state| {
-        state.borrow().sent_message.clone().into_iter().map(|result| {
-            result
-        }).collect()
+        state
+            .borrow()
+            .sent_message
+            .clone()
+            .into_iter()
+            .map(|result| result)
+            .collect()
     })
 }
 
