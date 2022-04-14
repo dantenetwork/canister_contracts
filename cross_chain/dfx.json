@@ -4,6 +4,11 @@
       "candid": "src/cross_chain/cross_chain.did",
       "package": "cross_chain",
       "type": "rust"
+    },
+    "greeting": {
+      "candid": "src/greeting/greeting.did",
+      "package": "greeting",
+      "type": "rust"
     }
   },
   "defaults": {

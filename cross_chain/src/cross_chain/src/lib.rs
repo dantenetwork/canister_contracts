@@ -129,7 +129,7 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
                     }
                 }
                 None => {
-                    state.pending_message = BTreeMap::from([(
+                    state.pending_message.insert(
                         received_key,
                         BTreeMap::from([(
                             message_hash,
@@ -138,7 +138,7 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
                                 validators: vec![validator],
                             },
                         )]),
-                    )]);
+                    );
                 }
             }
         });
