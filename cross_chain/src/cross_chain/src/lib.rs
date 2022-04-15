@@ -115,7 +115,11 @@ fn receive_message(id: u64, message: Message) -> Result {
                 Some(map) => {
                     if map.contains_key(&message_hash) {
                         let group: &mut PendingMessage = map.get_mut(&message_hash).unwrap();
-                        assert!(group.validators.contains(&validator), "already insert");
+                        assert!(
+                            !group.validators.contains(&validator),
+                            "{} already recived message",
+                            validator.to_text()
+                        );
                         group.validators.push(validator);
                     } else {
                         map.insert(
