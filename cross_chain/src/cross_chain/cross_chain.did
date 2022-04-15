@@ -1,4 +1,4 @@
-type ManageResult = variant {
+type Result = variant {
     Ok : bool;
     Err : ApiError;
 };
@@ -8,6 +8,7 @@ type ApiError = variant {
     NotValidator;
     AlreadyRegisterLocker;
     AlreadyRegisterValidator;
+    ExecuteMessageFailed;
     Other;
 };
 
@@ -47,11 +48,13 @@ type PendingMessage = record {
 };
 
 service : {
-    "registerLocker": () -> (ManageResult);
-    "receiveMessage": (nat64, Message) -> (ManageResult);
+    "registerLocker": () -> (Result);
+    "receiveMessage": (nat64, Message) -> (Result);
+    "execute_message": (text, nat64) -> (Result);
     "sendMessage": (text, Content) -> ();
-    "getPendingMessage": () -> (vec record {MapKey; vec record {text; PendingMessage}});
-    "getSentMessage": () -> (vec record {MapKey; Message});
+    "getPendingMessage": () -> (vec record {MapKey; vec record {text; PendingMessage}}) query;
+    "getExecutableMessage": () -> (vec record {MapKey; Message});
+    "getSentMessage": () -> (vec record {MapKey; Message}) query;
     "getFinalReceivedMessageId": (text, principal) -> (nat64) query;
     "getLatestMessageId": (text) -> (nat64) query;
     "getLockers": () -> (vec principal) query;

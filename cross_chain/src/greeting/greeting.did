@@ -11,7 +11,7 @@ type OtherChainGreeting = record {
  
 service : {
     "registerOtherChainGreeting": (text, text, text) -> ();
-    "receiveGreeting": (text, Greeting) -> ();
+    "receiveGreeting": (text, text, text, text) -> ();
     "setCrossChainCanister": (principal) -> ();
     "getCrossChainCanister": () -> (opt principal) query;
     "getGreetingData": (text) -> (opt Greeting) query;

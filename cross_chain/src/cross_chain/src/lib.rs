@@ -1,8 +1,8 @@
+use candid::IDLArgs;
 use ic_cdk::{
-    api::{self},
+    api,
     export::{candid::CandidType, Principal},
 };
-
 use ic_cdk_macros::*;
 use serde::{Deserialize, Serialize};
 use serde_cbor::Serializer;
@@ -17,9 +17,8 @@ struct State {
     lockers: HashSet<Principal>,
     pending_message: BTreeMap<MapKey, BTreeMap<String, PendingMessage>>,
     sent_message: BTreeMap<MapKey, Message>,
+    executable_message: BTreeMap<MapKey, Message>,
     sent_message_count: HashMap<String, u64>,
-    // pending_message: HashMap<String, BTreeMap<u64, HashMap<String, PendingMessage>>>,
-    // final_received_message_id: HashMap<String, HashMap<Principal, u64>>,
     final_received_message_id: BTreeMap<MapKey, u64>,
     latest_message_id: HashMap<String, u64>,
     validators: HashSet<Principal>,
@@ -64,15 +63,15 @@ fn register_validator() -> Result<bool> {
 }
 
 #[update(name = "receiveMessage")]
-fn receive_message(id: u64, message: Message) -> Result<bool> {
+fn receive_message(id: u64, message: Message) -> Result {
     let validator = api::caller();
     if is_validator(&validator) {
-        let final_received_key = MapKey::ValidatorFinalReceivedId {
-            chain_name: message.from_chain.clone(),
-            validator,
-        };
-        let message_hash = message.to_hash();
         STATE.with(|state| {
+            let final_received_key = MapKey::ValidatorFinalReceivedId {
+                chain_name: message.from_chain.clone(),
+                validator,
+            };
+            let message_hash = message.to_hash();
             let mut state = state.borrow_mut();
             // let state = &mut *state;
             let latest_message_id = *state
@@ -122,7 +121,7 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
                         map.insert(
                             message_hash,
                             PendingMessage {
-                                message,
+                                message: message.clone(),
                                 validators: vec![validator],
                             },
                         );
@@ -130,21 +129,31 @@ fn receive_message(id: u64, message: Message) -> Result<bool> {
                 }
                 None => {
                     state.pending_message.insert(
-                        received_key,
+                        received_key.clone(),
                         BTreeMap::from([(
                             message_hash,
                             PendingMessage {
-                                message,
+                                message: message.clone(),
                                 validators: vec![validator],
                             },
                         )]),
                     );
                 }
             }
+            let mut len = 0;
+            for (_, group) in state.pending_message.get(&received_key).unwrap() {
+                len += group.validators.len();
+            }
+            if len >= state.validators.len() {
+                state
+                    .executable_message
+                    .insert(received_key.clone(), message);
+                state.pending_message.remove(&received_key);
+            }
         });
         Ok(true)
     } else {
-        return Err(Error::NotValidator);
+        Err(Error::NotValidator)
     }
 }
 
@@ -175,6 +184,38 @@ fn send_message(to_chain: String, content: Content) {
     })
 }
 
+#[update(name = "executeMessage")]
+async fn execute_message(from_chain: String, id: u64) -> Result {
+    let executable_key = MapKey::MessageId {
+        chain_name: from_chain.clone(),
+        id,
+    };
+    let message = STATE.with(|state| {
+        let state = state.borrow();
+        state
+            .executable_message
+            .get(&executable_key)
+            .expect("not exists")
+            .clone()
+    });
+    let args: IDLArgs = message.content.data.parse().unwrap();
+    let result = api::call::call_raw(
+        Principal::from_text(message.content.contract.clone()).unwrap(),
+        message.content.action.as_str(),
+        args.to_bytes().unwrap().as_slice(),
+        0,
+    )
+    .await;
+    STATE.with(|state| {
+        let mut state = state.borrow_mut();
+        state.executable_message.remove(&executable_key);
+    });
+    match result {
+        Ok(_) => Ok(true),
+        Err(_) => Err(Error::ExecuteMessageFailed),
+    }
+}
+
 #[query(name = "getPendingMessage")]
 fn get_pending_message() -> Vec<(MapKey, Vec<(String, PendingMessage)>)> {
     STATE.with(|state| {
@@ -192,6 +233,19 @@ fn get_pending_message() -> Vec<(MapKey, Vec<(String, PendingMessage)>)> {
                         .collect(),
                 )
             })
+            .collect()
+    })
+}
+
+#[query(name = "getExecutableMessage")]
+fn get_executable_message() -> Vec<(MapKey, Message)> {
+    STATE.with(|state| {
+        state
+            .borrow()
+            .executable_message
+            .clone()
+            .into_iter()
+            .map(|map| map)
             .collect()
     })
 }
@@ -289,6 +343,7 @@ enum Error {
     NotValidator,
     AlreadyRegisterLocker,
     AlreadyRegisterValidator,
+    ExecuteMessageFailed,
     Other,
 }
 
@@ -359,4 +414,4 @@ enum MapKey {
     },
 }
 
-type Result<T = u128, E = Error> = StdResult<T, E>;
+type Result<T = bool, E = Error> = StdResult<T, E>;
