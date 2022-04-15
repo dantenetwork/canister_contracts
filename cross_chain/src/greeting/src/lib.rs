@@ -57,7 +57,7 @@ fn register_other_chain_greeting(chain_name: String, contract: String, action_na
 }
 
 #[update(name = "receiveGreeting")]
-fn receive_greeting(from_chain: String, greeting: Greeting) {
+fn receive_greeting(from_chain: String, title: String, content: String, date: String) {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         assert_eq!(
@@ -65,7 +65,15 @@ fn receive_greeting(from_chain: String, greeting: Greeting) {
             state.cross_chain_canster.unwrap(),
             "only call by cross chain canister"
         );
-        state.greeting_data.insert(from_chain, greeting);
+
+        state.greeting_data.insert(
+            from_chain,
+            Greeting {
+                title,
+                content,
+                date,
+            },
+        );
     })
 }
 
