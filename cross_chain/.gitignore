@@ -12,7 +12,6 @@
 
 # rust
 target/
-src/*_assets
 
 # frontend code
 node_modules/
@@ -21,3 +20,4 @@ dist/
 # package
 package-lock.json
 Cargo.lock
+src/declarations
