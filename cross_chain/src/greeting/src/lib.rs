@@ -16,6 +16,13 @@ struct Greeting {
     date: String,
 }
 
+#[derive(CandidType, Deserialize, Serialize, Clone)]
+struct Content {
+    contract: String,
+    action: String,
+    data: String,
+}
+
 #[derive(CandidType, Deserialize)]
 struct OtherChainGreeting {
     contract: String,
@@ -25,7 +32,7 @@ struct OtherChainGreeting {
 #[derive(CandidType, Deserialize, Default)]
 struct State {
     custodians: HashSet<Principal>,
-    cross_chain_canster: Option<Principal>,
+    cross_chain_canister: Option<Principal>,
     greeting_data: HashMap<String, Greeting>,
     other_chain_greeting_info: HashMap<String, OtherChainGreeting>,
 }
@@ -62,7 +69,7 @@ fn receive_greeting(from_chain: String, title: String, content: String, date: St
         let mut state = state.borrow_mut();
         assert_eq!(
             api::caller(),
-            state.cross_chain_canster.unwrap(),
+            state.cross_chain_canister.unwrap(),
             "only call by cross chain canister"
         );
 
@@ -77,21 +84,64 @@ fn receive_greeting(from_chain: String, title: String, content: String, date: St
     })
 }
 
+#[update(name = "sendGreeting")]
+async fn send_greeting(
+    to_chain: String,
+    title: String,
+    content: String,
+    date: String,
+) -> Result<bool, String> {
+    // let greeting_action_data = json!({
+    //     "greeting": [to_chain, title, content, date]
+    // }).to_string();
+    let greeting_action_data: String = format!(
+        r#"{{"greeting": ["{}","{}","{}","{}"]}}"#,
+        to_chain, title, content, date
+    );
+    // let args: IDLArgs = message.content.data.parse().unwrap();
+    let future = STATE.with(|state| {
+        let state = state.borrow();
+
+        // state.cross_chain_canister.clone().unwrap()
+        let other_chain_greeting = state
+            .other_chain_greeting_info
+            .get(&to_chain)
+            .expect("to chain not register");
+        api::call::call::<(String, Content), ()>(
+            state.cross_chain_canister.unwrap(),
+            "sendMessage",
+            (
+                to_chain,
+                Content {
+                    contract: other_chain_greeting.contract.clone(),
+                    action: other_chain_greeting.action_name.clone(),
+                    data: greeting_action_data,
+                },
+            ),
+        )
+    });
+    let result = future.await;
+    match result {
+        Ok(_) => Ok(true),
+        Err(_) => Err("call cross canister failed".to_string()),
+    }
+}
+
 #[update(name = "setCrossChainCanister")]
-fn set_cross_chain_canister(cross_chain_canster: Principal) {
+fn set_cross_chain_canister(cross_chain_canister: Principal) {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         assert!(
             state.custodians.contains(&api::caller()),
             "Only call by custodian"
         );
-        state.cross_chain_canster = Some(cross_chain_canster);
+        state.cross_chain_canister = Some(cross_chain_canister);
     })
 }
 
 #[query(name = "getCrossChainCanister")]
 fn get_cross_chain_canister() -> Option<Principal> {
-    STATE.with(|state| state.borrow().cross_chain_canster)
+    STATE.with(|state| state.borrow().cross_chain_canister)
 }
 
 #[query(name = "getCustodians")]
