@@ -48,16 +48,23 @@ type PendingMessage = record {
 };
 
 service : {
-    "registerLocker": () -> (Result);
+    "registerLocker": (principal) -> (Result);
+    "registerValidator": () -> (Result);
+    "unRegisterValidator": () -> (Result);
     "receiveMessage": (nat64, Message) -> (Result);
-    "execute_message": (text, nat64) -> (Result);
+    "executeMessage": (text, nat64) -> (Result);
     "sendMessage": (text, Content) -> ();
     "getPendingMessage": () -> (vec record {MapKey; vec record {text; PendingMessage}}) query;
-    "getExecutableMessage": () -> (vec record {MapKey; Message});
+    "getExecutableMessage": () -> (vec record {MapKey; Message}) query;
     "getSentMessage": () -> (vec record {MapKey; Message}) query;
+    "getSentMessageById": (text, nat64) -> (Message) query;
+    "getSentMessageCount": (text) -> (nat64) query;
     "getFinalReceivedMessageId": (text, principal) -> (nat64) query;
+    "getMsgPortingTask": (text, principal) -> (nat64) query;
     "getLatestMessageId": (text) -> (nat64) query;
     "getLockers": () -> (vec principal) query;
     "getCustodians": () -> (vec principal) query;
     "getValidators": () -> (vec principal) query;
+    "clearRecivedMessage": (vec text) -> ();
+    "clearSentMessage": (vec text) -> ();
 }
