@@ -303,7 +303,7 @@ fn get_sent_message_count(chain_nme: String) -> u64 {
             .borrow()
             .sent_message_count
             .get(&chain_nme)
-            .unwrap()
+            .unwrap_or(&0u64)
     })
 }
 

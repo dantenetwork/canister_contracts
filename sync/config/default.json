@@ -1,0 +1,67 @@
+{
+  "networks": {
+    // "PlatON": {
+    //   "nodeAddress": "http://34.85.65.222:6789",
+    //   "crossChainContractAddress": "lat1ysqyczq7la04csd6tadfe6tt7kc9egmd3w2tpd",
+    //   "validatorPrivateKey": "0x97d627c4ce5544d4ab1fa1e49affc7f36036bbcbc942078d7c9f07f18c32e003",
+    //   "compatibleChain": "platon",
+    //   "chainId": 210309
+    // },
+    // "PlatONEVM": {
+    //   "nodeAddress": "https://openapi.platon.network/rpc",
+    //   "crossChainContractAddress": "0x49766f787b1E184c5EeAEA36d1eC090Cf25BD72e",
+    //   "validatorPrivateKey": "0x97d627c4ce5544d4ab1fa1e49affc7f36036bbcbc942078d7c9f07f18c32e003",
+    //   "abiPath": "./MultiPorterCrossChain.json",
+    //   "compatibleChain": "ethereum",
+    //   "receiveChains": [],
+    //   "chainId": 100
+    // },
+    // "PlatONEVMDEV": {
+    //   "nodeAddress": "http://35.247.155.162:6789",
+    //   "crossChainContractAddress": "0x472F57079e2d2AB82F7b011Adb90Bfa751062b28",
+    //   "validatorPrivateKey": "0x8d17969fd442d82868f9f256ce12338bc41fca66bebe88b97b15e40c2f99f9fc",
+    //   "abiPath": "./TwoPhaseCommitCrossChain.json",
+    //   "compatibleChain": "ethereum",
+    //   "receiveChains": ["AVALANCHE"],
+    //   "chainId": 210309
+    // },
+    // "AVALANCHE": {
+    //   "nodeAddress": "https://api.avax-test.network/ext/bc/C/rpc",
+    //   "crossChainContractAddress": "0xe0d1951E527190C446821DeA9ce774a3Bc7E443A",
+    //   "validatorPrivateKey": "0x8d17969fd442d82868f9f256ce12338bc41fca66bebe88b97b15e40c2f99f9fc",
+    //   "validatorPublicKey": "",
+    //   "abiPath": "./TwoPhaseCommitCrossChain.json",
+    //   "compatibleChain": "ethereum",
+    //   "receiveChains": ["PlatONEVMDEV", "NEAR"],
+    //   "chainId": 43113
+    // },
+    "NEAR": {
+      "networkId": "testnet",
+      "nodeUrl": "https://rpc.testnet.near.org",
+      "validatorAccountId": "georgecross.testnet",
+      "validatorPublicKey": "ed25519:4rAo1M3BjosotXfKn9fKBEern3999WMoyXiZLNTS8agf",
+      "walletUrl": "https://wallet.testnet.near.org",
+      "helperUrl": "https://helper.testnet.near.org",
+      "crossChainContractAddress": "d-hub.testnet",
+      "receiveChains": ["DFINITY"],
+      "compatibleChain": "near"
+    },
+    // "RINKEBY": {
+    //   "nodeAddress": "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+    //   "crossChainContractAddress": "0x4B870Af8Ff3a338A7F2973c70024928cb5603FC3",
+    //   "validatorPrivateKey": "0x8d17969fd442d82868f9f256ce12338bc41fca66bebe88b97b15e40c2f99f9fc",
+    //   "abiPath": "./TwoPhaseCommitCrossChain.json",
+    //   "compatibleChain": "ethereum",
+    //   "receiveChains": ["NEAR"],
+    //   "chainId": 4
+    // },
+    "DFINITY": {
+      "network": "http://127.0.0.1:8000",
+      "validatorPrincipal": "bimmb-f7wlm-n54ph-d4ems-mlfay-fyhsj-efxdg-2xotg-txngs-ywbwg-iae",
+      "validatorPrivateKey": "6cd4af9d666d02de4276b81b3cfbaca4ce6cd8e379f06a911bf68311748250b3a74902820028413a6cc7d7afe4f0f22fd2779a5dd66dd78e68e843916a4ec5e4",
+      "compatibleChain": "dfinity",
+      "canisterId": "rrkah-fqaaa-aaaaa-aaaaq-cai",
+      "receiveChains": ["NEAR"]
+    }
+  }
+}

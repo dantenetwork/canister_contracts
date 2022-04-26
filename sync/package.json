@@ -1,0 +1,23 @@
+{
+  "name": "sync",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dfinity/agent": "^0.11.0",
+    "@dfinity/identity": "^0.11.1",
+    "@dfinity/principal": "^0.11.0",
+    "config": "^3.3.6",
+    "eth-web3": "npm:web3@^1.6.1",
+    "fs": "0.0.1-security",
+    "near-api-js": "^0.43.1",
+    "os": "^0.1.2",
+    "path": "^0.12.7"
+  }
+}
