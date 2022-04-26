@@ -38,7 +38,7 @@ const canisterEnvVariables = initCanisterEnv();
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-const frontendDirectory = "cross_chain_assets";
+const frontendDirectory = "greeting_assets";
 
 const asset_entry = path.join("src", frontendDirectory, "src", "index.html");
 

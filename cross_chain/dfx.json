@@ -9,12 +9,19 @@
       "candid": "src/greeting/greeting.did",
       "package": "greeting",
       "type": "rust"
-    }
-  },
-  "defaults": {
-    "build": {
-      "args": "",
-      "packtool": ""
+    },
+    "greeting_assets": {
+      "dependencies": [
+        "greeting"
+      ],
+      "frontend": {
+        "entrypoint": "src/greeting_assets/src/index.html"
+      },
+      "source": [
+        "src/greeting_assets/assets",
+        "dist/greeting_assets/"
+      ],
+      "type": "assets"
     }
   },
   "dfx": "0.9.3",

@@ -37,20 +37,20 @@ fn init() {
 }
 
 #[update(name = "registerLocker")]
-fn register_locker() -> Result<bool> {
+fn register_locker(locker: Principal) -> Result {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         let caller = api::caller();
-        if state.lockers.contains(&caller) {
-            Err(Error::AlreadyRegisterLocker)
+        if state.custodians.contains(&caller) {
+            Ok(state.lockers.insert(locker))
         } else {
-            Ok(state.lockers.insert(caller))
+            Err(Error::Unauthorized)
         }
     })
 }
 
 #[update(name = "registerValidator")]
-fn register_validator() -> Result<bool> {
+fn register_validator() -> Result {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         let caller = api::caller();
@@ -58,6 +58,19 @@ fn register_validator() -> Result<bool> {
             Err(Error::AlreadyRegisterValidator)
         } else {
             Ok(state.validators.insert(caller))
+        }
+    })
+}
+
+#[update(name = "unRegisterValidator")]
+fn un_register_validator() -> Result {
+    STATE.with(|state| {
+        let mut state = state.borrow_mut();
+        let caller = api::caller();
+        if state.validators.contains(&caller) {
+            Ok(state.validators.remove(&caller))
+        } else {
+            Err(Error::NotValidator)
         }
     })
 }
@@ -267,6 +280,33 @@ fn get_sent_message() -> Vec<(MapKey, Message)> {
     })
 }
 
+#[query(name = "getSentMessageById")]
+fn get_sent_message_by_id(chain_name: String, id: u64) -> Message {
+    STATE.with(|state| {
+        let key = MapKey::MessageId {
+            chain_name,
+            id
+        };
+         state
+            .borrow()
+            .sent_message
+            .get(&key)
+            .cloned()
+            .unwrap()
+    })
+}
+
+#[query(name = "getSentMessageCount")]
+fn get_sent_message_count(chain_nme: String) -> u64 {
+    STATE.with(|state| {
+        *state
+            .borrow()
+            .sent_message_count
+            .get(&chain_nme)
+            .unwrap()
+    })
+}
+
 #[query(name = "getFinalReceivedMessageId")]
 fn get_final_received_message_id(chain_name: String, validator: Principal) -> u64 {
     STATE.with(|state| {
@@ -278,6 +318,35 @@ fn get_final_received_message_id(chain_name: String, validator: Principal) -> u6
                 validator,
             })
             .unwrap_or(&0u64)
+    })
+}
+
+#[query(name = "getMsgPortingTask")]
+fn get_msg_porting_task(from_chain: String, validator: Principal) -> u64 {
+    STATE.with(|state| {
+        let state = state.borrow();
+        let len = state.pending_message.len();
+        let final_received_message_id = state
+            .final_received_message_id
+            .get(&MapKey::ValidatorFinalReceivedId {
+                chain_name: from_chain.clone(),
+                validator,
+            })
+            .unwrap_or(&0);
+        if len != 0 {
+            for (key, _) in state.pending_message.clone() {
+                match key {
+                    MapKey::MessageId { chain_name, id } => {
+                        if chain_name != from_chain || id <= *final_received_message_id {
+                            continue;
+                        }
+                        return id;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        state.latest_message_id.get(&from_chain).unwrap_or(&0) + 1
     })
 }
 
@@ -419,3 +488,49 @@ enum MapKey {
 }
 
 type Result<T = bool, E = Error> = StdResult<T, E>;
+
+// for debug
+#[update(name = "clearRecivedMessage")]
+fn clear_received_message(chains: Vec<String>) {
+    STATE.with(|state| {
+        let mut state = state.borrow_mut();
+        state.executable_message.clear();
+        state.pending_message.clear();
+        let validators: Vec<Principal> = state
+            .validators
+            .clone()
+            .into_iter()
+            .map(|validator| validator)
+            .collect();
+        for chain_name in chains {
+            for validator in validators.clone() {
+                state
+                    .final_received_message_id
+                    .remove(&MapKey::ValidatorFinalReceivedId {
+                        chain_name: chain_name.clone(),
+                        validator,
+                    });
+            }
+            state.latest_message_id.remove(&chain_name);
+        }
+    })
+}
+
+#[update(name = "clearSentMessage")]
+fn clear_sent_message(chains: Vec<String>) {
+    STATE.with(|state| {
+        let mut state = state.borrow_mut();
+        for chain_name in chains {
+            for id in 1..state.sent_message_count.get(&chain_name).unwrap_or(&0) + 1 {
+                let key = MapKey::MessageId {
+                    chain_name: chain_name.clone(),
+                    id,
+                };
+                if state.sent_message.contains_key(&key) {
+                    state.sent_message.remove(&key);
+                }
+            }
+            state.sent_message_count.remove(&chain_name);
+        }
+    })
+}
