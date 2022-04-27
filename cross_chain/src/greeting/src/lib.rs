@@ -94,9 +94,10 @@ async fn send_greeting(
     // let greeting_action_data = json!({
     //     "greeting": [to_chain, title, content, date]
     // }).to_string();
+    let from_chain = "DFINITY".to_string();
     let greeting_action_data: String = format!(
         r#"{{"greeting": ["{}","{}","{}","{}"]}}"#,
-        to_chain, title, content, date
+        from_chain, title, content, date
     );
     // let args: IDLArgs = message.content.data.parse().unwrap();
     let future = STATE.with(|state| {

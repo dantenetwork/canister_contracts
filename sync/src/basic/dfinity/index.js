@@ -62,7 +62,6 @@ class DfinityHandler {
 
   // query receive message count of near protocol
   async querySentMessageCount(toChain) {
-    console.log("------------- start query sent message count -----------");
     return this.actor.getSentMessageCount(toChain);
   }
 

@@ -16,7 +16,9 @@ async function sendMessage(fromChain, toChain) {
     let id = nextMessageId;
     let message = await fromHandler.getSentMessageById(toChain, id);
     // TODO check message is irreversible
-    await toHandler.pushMessage(message);
+    let m = [id, message.from_chain, message.to_chain, message.sender, message.signer, { reveal: true },
+      [message.content.contract, message.content.action, message.content.data]];
+    await toHandler.pushMessage(m);
   }
 }
 
