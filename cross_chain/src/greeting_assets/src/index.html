@@ -12,13 +12,27 @@
     <main>
       <img src="logo.png" alt="DFINITY logo" />
       <form action="#">
-        <label for="name">To Chain Name: &nbsp;</label>
-        <input id="name" alt="Name" type="text" />
-        <label for="name">Title: &nbsp;</label>
-        <input id="name" alt="Title" type="text" />
-        <label for="name">Content: &nbsp;</label>
-        <input id="name" alt="Content" type="text" />
-        <button type="submit">Send Greeting!</button>
+        <table cellspacing="" cellpaddint="">
+            <tr>
+              <td align="right"><label for="toChainName">To Chain</label></td>
+              <td><input id = "toChainName" type="text" list="chainNameList"/></td>
+              <datalist id="chainNameList">
+                <option>NEAR</option>
+              </datalist>
+            </tr>
+            <tr>
+              <td align="right"><label for="title">Title</label></td>
+              <td ><input id="title" alt="Title" type="text" /></td>
+            </tr>
+            <tr>
+              <td align="right"><label for="content">Content</label></td>
+              <td><input id="content" alt="Content" type="text" /></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td align="center"><button type="submit">Send Greeting!</button></td>
+            </tr>
+        </table>
       </form>
       <section id="greeting"></section>
     </main>
