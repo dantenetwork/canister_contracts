@@ -19,6 +19,7 @@ type Message = record {
     signer : text;
     sqos : Sqos;
     content : Content;
+    session : Session;
 };
 
 type Sqos = record {
@@ -30,6 +31,11 @@ type Content = record {
     action : text;
     data : text;
 };
+
+type Session = record {
+    res_type : nat8;
+    id : nat64;
+}
 
 type MapKey = variant {
     MessageId : record {
@@ -53,7 +59,7 @@ service : {
     "unRegisterValidator": () -> (Result);
     "receiveMessage": (nat64, Message) -> (Result);
     "executeMessage": (text, nat64) -> (Result);
-    "sendMessage": (text, Content) -> ();
+    "sendMessage": (text, Content, Session) -> ();
     "getPendingMessage": () -> (vec record {MapKey; vec record {text; PendingMessage}}) query;
     "getExecutableMessage": () -> (vec record {MapKey; Message}) query;
     "getSentMessage": () -> (vec record {MapKey; Message}) query;

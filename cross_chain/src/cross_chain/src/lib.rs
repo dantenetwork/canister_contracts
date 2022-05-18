@@ -1,4 +1,4 @@
-use candid::IDLArgs;
+use candid::{IDLArgs, parser::value::{IDLValue, IDLField}, types::Label};
 use ic_cdk::{
     api,
     export::{candid::CandidType, Principal},
@@ -175,7 +175,7 @@ fn receive_message(id: u64, message: Message) -> Result {
 }
 
 #[update(name = "sendMessage")]
-fn send_message(to_chain: String, content: Content) {
+fn send_message(to_chain: String, content: Content, session: Session) {
     let caller = api::caller();
     // let signer = caller.to_text();
     STATE.with(|state| {
@@ -189,6 +189,7 @@ fn send_message(to_chain: String, content: Content) {
             signer: caller.to_text(),
             sqos: Sqos { reveal: 1u8 },
             content,
+            session,
         };
         state.sent_message.insert(
             MapKey::MessageId {
@@ -215,7 +216,23 @@ async fn execute_message(from_chain: String, id: u64) -> Result {
             .expect("not exists")
             .clone()
     });
-    let args: IDLArgs = message.content.data.parse().unwrap();
+    let message_cp = message.clone();
+    let session = vec![
+        IDLField{id: Label::Named("res_type".to_string()), val: IDLValue::Nat8(message_cp.session.res_type)},
+        IDLField{id: Label::Named("id".to_string()), val: IDLValue::Nat64(message_cp.session.id)}
+    ];
+    let idl_field = vec![
+        IDLField{id: Label::Named("id".to_string()), val: IDLValue::Nat64(id)},
+        IDLField{id: Label::Named("from_chain".to_string()), val: IDLValue::Text(message_cp.from_chain)},
+        IDLField{id: Label::Named("sender".to_string()), val: IDLValue::Text(message_cp.sender)},
+        IDLField{id: Label::Named("signer".to_string()), val: IDLValue::Text(message_cp.signer)},
+        IDLField{id: Label::Named("contract_id".to_string()), val: IDLValue::Text(message_cp.content.contract)},
+        IDLField{id: Label::Named("action".to_string()), val: IDLValue::Text(message_cp.content.action)},
+        IDLField{id: Label::Named("session".to_string()), val: IDLValue::Record(session)},
+    ];
+    let context = IDLValue::Record(idl_field);
+    let mut args: IDLArgs = message.content.data.parse().unwrap();
+    args.args.push(context);
     let result = api::call::call_raw(
         Principal::from_text(message.content.contract.clone()).unwrap(),
         message.content.action.as_str(),
@@ -434,7 +451,10 @@ struct Message {
     signer: String,
     sqos: Sqos,
     content: Content,
+    session: Session,
 }
+
+
 
 impl Message {
     pub fn to_hash(&self) -> String {
@@ -456,6 +476,12 @@ struct Content {
     contract: String,
     action: String,
     data: String,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone)]
+struct Session {
+    res_type: u8,
+    id: u64
 }
 
 #[derive(CandidType, Deserialize, Serialize, Clone)]

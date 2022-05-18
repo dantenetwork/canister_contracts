@@ -24,8 +24,8 @@ struct Content {
 }
 
 #[derive(CandidType, Deserialize)]
-struct OtherChainGreeting {
-    contract: String,
+struct DstContract {
+    contract_address: String,
     action_name: String,
 }
 
