@@ -1,5 +1,5 @@
 use ic_cdk::{
-    api::{self},
+    api,
     export::{candid::CandidType, Principal},
 };
 
@@ -23,18 +23,19 @@ struct Content {
     data: String,
 }
 
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Clone)]
 struct DstContract {
     contract_address: String,
     action_name: String,
 }
 
-#[derive(CandidType, Deserialize, Default)]
+#[derive(CandidType, Deserialize, Default, Clone)]
 struct State {
     custodians: HashSet<Principal>,
     cross_chain_canister: Option<Principal>,
     greeting_data: HashMap<String, Greeting>,
-    other_chain_greeting_info: HashMap<String, OtherChainGreeting>,
+    destination_contract: HashMap<String, HashMap<String, DstContract>>,
+    permitted_contract: HashMap<String, HashMap<String, HashSet<String>>>,
 }
 
 thread_local! {
@@ -49,17 +50,63 @@ fn int() {
     })
 }
 
-#[update(name = "registerOtherChainGreeting")]
-fn register_other_chain_greeting(chain_name: String, contract: String, action_name: String) {
+#[update(name = "registerDstContract")]
+fn register_dst_contract(
+    chain_name: String,
+    action_name: String,
+    contract_address: String,
+    contract_action_name: String,
+) {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
-        state.other_chain_greeting_info.insert(
-            chain_name,
-            OtherChainGreeting {
-                contract,
-                action_name,
-            },
-        );
+        if state.destination_contract.contains_key(&chain_name) {
+            state
+                .destination_contract
+                .get_mut(&chain_name)
+                .and_then(|map| {
+                    map.insert(
+                        action_name,
+                        DstContract {
+                            contract_address,
+                            action_name: contract_action_name,
+                        },
+                    )
+                });
+        } else {
+            state.destination_contract.insert(
+                chain_name,
+                HashMap::from([(
+                    action_name,
+                    DstContract {
+                        contract_address,
+                        action_name: contract_action_name,
+                    },
+                )]),
+            );
+        }
+    })
+}
+
+#[update(name = "registerPermittedContract")]
+fn register_permitted_contract(chain_name: String, sender: String, action_name: String) {
+    STATE.with(|state| {
+        let mut state = state.borrow_mut();
+        if let Some(contract) = state.permitted_contract.get_mut(&chain_name) {
+            if let Some(actions) = contract.get_mut(&sender) {
+                assert!(
+                    !actions.contains(&action_name),
+                    "Permitted contract already register"
+                );
+                actions.insert(action_name);
+            } else {
+                contract.insert(sender, HashSet::from([action_name]));
+            }
+        } else {
+            state.permitted_contract.insert(
+                chain_name,
+                HashMap::from([(sender, HashSet::from([action_name]))]),
+            );
+        }
     })
 }
 
@@ -99,29 +146,37 @@ async fn send_greeting(
         r#"{{"greeting": ["{}","{}","{}","{}"]}}"#,
         from_chain, title, content, date
     );
-    // let args: IDLArgs = message.content.data.parse().unwrap();
-    let future = STATE.with(|state| {
+    let action_name = "receiveGreeting".to_string();
+    let destination_contract = STATE.with(|state| {
         let state = state.borrow();
-
-        // state.cross_chain_canister.clone().unwrap()
-        let other_chain_greeting = state
-            .other_chain_greeting_info
+        let destination_contract = state
+            .destination_contract
             .get(&to_chain)
             .expect("to chain not register");
-        api::call::call::<(String, Content), ()>(
-            state.cross_chain_canister.unwrap(),
-            "sendMessage",
-            (
-                to_chain,
-                Content {
-                    contract: other_chain_greeting.contract.clone(),
-                    action: other_chain_greeting.action_name.clone(),
-                    data: greeting_action_data,
-                },
-            ),
-        )
+        destination_contract
+            .get(&action_name)
+            .expect("action name not register")
+            .clone()
     });
-    let result = future.await;
+
+    let cross_chain_canister = STATE.with(|state| {
+        let state = state.borrow();
+        state.cross_chain_canister.unwrap()
+    });
+
+    let result = api::call::call::<(String, Content), ()>(
+        cross_chain_canister,
+        "sendMessage",
+        (
+            to_chain,
+            Content {
+                contract: destination_contract.contract_address.clone(),
+                action: destination_contract.action_name.clone(),
+                data: greeting_action_data,
+            },
+        ),
+    )
+    .await;
     match result {
         Ok(_) => Ok(true),
         Err(_) => Err("call cross canister failed".to_string()),

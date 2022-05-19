@@ -14,7 +14,8 @@ type Result = variant {
     Err : text;
 };
 service : {
-    "registerOtherChainGreeting": (text, text, text) -> ();
+    "registerDstContract": (text, text, text, text) -> ();
+    "registerPermittedContract" : (text, text, text) -> ();
     "receiveGreeting": (text, text, text, text) -> ();
     "sendGreeting": (text, text, text, text) -> (Result);
     "setCrossChainCanister": (principal) -> ();

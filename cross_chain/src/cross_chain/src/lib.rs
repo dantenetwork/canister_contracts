@@ -1,4 +1,8 @@
-use candid::{IDLArgs, parser::value::{IDLValue, IDLField}, types::Label};
+use candid::{
+    parser::value::{IDLField, IDLValue},
+    types::Label,
+    IDLArgs,
+};
 use ic_cdk::{
     api,
     export::{candid::CandidType, Principal},
@@ -50,27 +54,27 @@ fn register_locker(locker: Principal) -> Result {
 }
 
 #[update(name = "registerValidator")]
-fn register_validator() -> Result {
+fn register_validator(validator: Principal) -> Result {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         let caller = api::caller();
-        if state.validators.contains(&caller) {
-            Err(Error::AlreadyRegisterValidator)
+        if state.custodians.contains(&caller) {
+            Ok(state.validators.insert(validator))
         } else {
-            Ok(state.validators.insert(caller))
+            Err(Error::Unauthorized)
         }
     })
 }
 
 #[update(name = "unRegisterValidator")]
-fn un_register_validator() -> Result {
+fn un_register_validator(validator: Principal) -> Result {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         let caller = api::caller();
-        if state.validators.contains(&caller) {
-            Ok(state.validators.remove(&caller))
+        if state.custodians.contains(&caller) {
+            Ok(state.validators.remove(&validator))
         } else {
-            Err(Error::NotValidator)
+            Err(Error::Unauthorized)
         }
     })
 }
@@ -216,23 +220,13 @@ async fn execute_message(from_chain: String, id: u64) -> Result {
             .expect("not exists")
             .clone()
     });
-    let message_cp = message.clone();
-    let session = vec![
-        IDLField{id: Label::Named("res_type".to_string()), val: IDLValue::Nat8(message_cp.session.res_type)},
-        IDLField{id: Label::Named("id".to_string()), val: IDLValue::Nat64(message_cp.session.id)}
-    ];
-    let idl_field = vec![
-        IDLField{id: Label::Named("id".to_string()), val: IDLValue::Nat64(id)},
-        IDLField{id: Label::Named("from_chain".to_string()), val: IDLValue::Text(message_cp.from_chain)},
-        IDLField{id: Label::Named("sender".to_string()), val: IDLValue::Text(message_cp.sender)},
-        IDLField{id: Label::Named("signer".to_string()), val: IDLValue::Text(message_cp.signer)},
-        IDLField{id: Label::Named("contract_id".to_string()), val: IDLValue::Text(message_cp.content.contract)},
-        IDLField{id: Label::Named("action".to_string()), val: IDLValue::Text(message_cp.content.action)},
-        IDLField{id: Label::Named("session".to_string()), val: IDLValue::Record(session)},
-    ];
-    let context = IDLValue::Record(idl_field);
-    let mut args: IDLArgs = message.content.data.parse().unwrap();
-    args.args.push(context);
+    let context = get_context(id, message.clone());
+    let mut data: IDLArgs = message.content.data.parse().unwrap();
+    // TODO
+    // direct use args catch "collision or not sorted" error, so parse again.
+    data.args.push(context);
+    let args: IDLArgs = format!("{:?}", data).parse().unwrap();
+    // api::print(format!("{:?}", args.clone()));
     let result = api::call::call_raw(
         Principal::from_text(message.content.contract.clone()).unwrap(),
         message.content.action.as_str(),
@@ -242,12 +236,58 @@ async fn execute_message(from_chain: String, id: u64) -> Result {
     .await;
     STATE.with(|state| {
         let mut state = state.borrow_mut();
+        // let message = state.executable_message.get_mut(&executable_key).unwrap();
+        // message.content.data = data;
         state.executable_message.remove(&executable_key);
     });
     match result {
         Ok(_) => Ok(true),
         Err(_) => Err(Error::ExecuteMessageFailed),
     }
+}
+
+fn get_context(id: u64, message: Message) -> IDLValue {
+    let session = vec![
+        IDLField {
+            id: Label::Named("res_type".to_string()),
+            val: IDLValue::Nat8(message.session.res_type),
+        },
+        IDLField {
+            id: Label::Named("id".to_string()),
+            val: IDLValue::Nat64(message.session.id),
+        },
+    ];
+    let idl_field = vec![
+        IDLField {
+            id: Label::Named("id".to_string()),
+            val: IDLValue::Nat64(id),
+        },
+        IDLField {
+            id: Label::Named("from_chain".to_string()),
+            val: IDLValue::Text(message.from_chain),
+        },
+        IDLField {
+            id: Label::Named("sender".to_string()),
+            val: IDLValue::Text(message.sender),
+        },
+        IDLField {
+            id: Label::Named("signer".to_string()),
+            val: IDLValue::Text(message.signer),
+        },
+        IDLField {
+            id: Label::Named("contract_id".to_string()),
+            val: IDLValue::Text(message.content.contract),
+        },
+        IDLField {
+            id: Label::Named("action".to_string()),
+            val: IDLValue::Text(message.content.action),
+        },
+        IDLField {
+            id: Label::Named("session".to_string()),
+            val: IDLValue::Record(session),
+        },
+    ];
+    IDLValue::Record(idl_field)
 }
 
 #[query(name = "getPendingMessage")]
@@ -300,16 +340,8 @@ fn get_sent_message() -> Vec<(MapKey, Message)> {
 #[query(name = "getSentMessageById")]
 fn get_sent_message_by_id(chain_name: String, id: u64) -> Message {
     STATE.with(|state| {
-        let key = MapKey::MessageId {
-            chain_name,
-            id
-        };
-         state
-            .borrow()
-            .sent_message
-            .get(&key)
-            .cloned()
-            .unwrap()
+        let key = MapKey::MessageId { chain_name, id };
+        state.borrow().sent_message.get(&key).cloned().unwrap()
     })
 }
 
@@ -454,7 +486,16 @@ struct Message {
     session: Session,
 }
 
-
+#[derive(CandidType, Deserialize, Serialize, Clone)]
+struct Context {
+    id: u64,
+    from_chain: String,
+    sender: String,
+    signer: String,
+    contract: String,
+    action: String,
+    session: Session,
+}
 
 impl Message {
     pub fn to_hash(&self) -> String {
@@ -462,10 +503,6 @@ impl Message {
         let mut serializer = Serializer::new(&mut data);
         serializer.self_describe().unwrap();
         self.serialize(&mut serializer).unwrap();
-        // let mut hasher = Sha256::new();
-        // hasher.update(data);
-        // let result = hasher.finalize();
-
         let hash = Sha256::digest(data);
         format!("{:x}", hash)
     }
@@ -481,7 +518,7 @@ struct Content {
 #[derive(CandidType, Deserialize, Serialize, Clone)]
 struct Session {
     res_type: u8,
-    id: u64
+    id: u64,
 }
 
 #[derive(CandidType, Deserialize, Serialize, Clone)]
@@ -517,46 +554,58 @@ type Result<T = bool, E = Error> = StdResult<T, E>;
 
 // for debug
 #[update(name = "clearRecivedMessage")]
-fn clear_received_message(chains: Vec<String>) {
+fn clear_received_message(chains: Vec<String>) -> Result {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
-        state.executable_message.clear();
-        state.pending_message.clear();
-        let validators: Vec<Principal> = state
-            .validators
-            .clone()
-            .into_iter()
-            .map(|validator| validator)
-            .collect();
-        for chain_name in chains {
-            for validator in validators.clone() {
-                state
-                    .final_received_message_id
-                    .remove(&MapKey::ValidatorFinalReceivedId {
-                        chain_name: chain_name.clone(),
-                        validator,
-                    });
+        let caller = api::caller();
+        if state.custodians.contains(&caller) {
+            state.executable_message.clear();
+            state.pending_message.clear();
+            let validators: Vec<Principal> = state
+                .validators
+                .clone()
+                .into_iter()
+                .map(|validator| validator)
+                .collect();
+            for chain_name in chains {
+                for validator in validators.clone() {
+                    state
+                        .final_received_message_id
+                        .remove(&MapKey::ValidatorFinalReceivedId {
+                            chain_name: chain_name.clone(),
+                            validator,
+                        });
+                }
+                state.latest_message_id.remove(&chain_name);
             }
-            state.latest_message_id.remove(&chain_name);
+            Ok(true)
+        } else {
+            Err(Error::Unauthorized)
         }
     })
 }
 
 #[update(name = "clearSentMessage")]
-fn clear_sent_message(chains: Vec<String>) {
+fn clear_sent_message(chains: Vec<String>) -> Result {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
-        for chain_name in chains {
-            for id in 1..state.sent_message_count.get(&chain_name).unwrap_or(&0) + 1 {
-                let key = MapKey::MessageId {
-                    chain_name: chain_name.clone(),
-                    id,
-                };
-                if state.sent_message.contains_key(&key) {
-                    state.sent_message.remove(&key);
+        let caller = api::caller();
+        if state.custodians.contains(&caller) {
+            for chain_name in chains {
+                for id in 1..state.sent_message_count.get(&chain_name).unwrap_or(&0) + 1 {
+                    let key = MapKey::MessageId {
+                        chain_name: chain_name.clone(),
+                        id,
+                    };
+                    if state.sent_message.contains_key(&key) {
+                        state.sent_message.remove(&key);
+                    }
                 }
+                state.sent_message_count.remove(&chain_name);
             }
-            state.sent_message_count.remove(&chain_name);
+            Ok(true)
+        } else {
+            Err(Error::Unauthorized)
         }
     })
 }
