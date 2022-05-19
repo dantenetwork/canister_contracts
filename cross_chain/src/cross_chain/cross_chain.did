@@ -19,6 +19,7 @@ type Message = record {
     signer : text;
     sqos : Sqos;
     content : Content;
+    session : Session;
 };
 
 type Sqos = record {
@@ -29,6 +30,11 @@ type Content = record {
     contract : text;
     action : text;
     data : text;
+};
+
+type Session = record {
+    res_type : nat8;
+    id : nat64;
 };
 
 type MapKey = variant {
@@ -49,11 +55,11 @@ type PendingMessage = record {
 
 service : {
     "registerLocker": (principal) -> (Result);
-    "registerValidator": () -> (Result);
-    "unRegisterValidator": () -> (Result);
+    "registerValidator": (principal) -> (Result);
+    "unRegisterValidator": (principal) -> (Result);
     "receiveMessage": (nat64, Message) -> (Result);
     "executeMessage": (text, nat64) -> (Result);
-    "sendMessage": (text, Content) -> ();
+    "sendMessage": (text, Content, Session) -> ();
     "getPendingMessage": () -> (vec record {MapKey; vec record {text; PendingMessage}}) query;
     "getExecutableMessage": () -> (vec record {MapKey; Message}) query;
     "getSentMessage": () -> (vec record {MapKey; Message}) query;
@@ -65,6 +71,6 @@ service : {
     "getLockers": () -> (vec principal) query;
     "getCustodians": () -> (vec principal) query;
     "getValidators": () -> (vec principal) query;
-    "clearRecivedMessage": (vec text) -> ();
-    "clearSentMessage": (vec text) -> ();
+    "clearRecivedMessage": (vec text) -> (Result);
+    "clearSentMessage": (vec text) -> (Result);
 }
