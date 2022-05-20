@@ -185,7 +185,7 @@ fn send_message(to_chain: String, content: Content, session: Session) {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
         let id = state.sent_message_count.get(&to_chain).unwrap_or(&0u64) + 1;
-        // assert!(state.lockers.contains(&caller), "not register locker");
+        assert!(state.lockers.contains(&caller), "not register locker");
         let message = Message {
             from_chain: "DFINITY".to_string(),
             to_chain: to_chain.clone(),
