@@ -23,6 +23,12 @@ struct Content {
     data: String,
 }
 
+#[derive(CandidType, Deserialize, Serialize, Clone)]
+struct Session {
+    res_type: u8,
+    id: u64,
+}
+
 #[derive(CandidType, Deserialize, Clone)]
 struct DstContract {
     contract_address: String,
@@ -164,7 +170,7 @@ async fn send_greeting(
         state.cross_chain_canister.unwrap()
     });
 
-    let result = api::call::call::<(String, Content), ()>(
+    let result = api::call::call::<(String, Content, Session), ()>(
         cross_chain_canister,
         "sendMessage",
         (
@@ -174,12 +180,16 @@ async fn send_greeting(
                 action: destination_contract.action_name.clone(),
                 data: greeting_action_data,
             },
+            Session { res_type: 0, id: 0 },
         ),
     )
     .await;
     match result {
         Ok(_) => Ok(true),
-        Err(_) => Err("call cross canister failed".to_string()),
+        Err(err) => {
+            api::print(format!("{:?}", err));
+            Err("call cross canister failed".to_string())
+        }
     }
 }
 
