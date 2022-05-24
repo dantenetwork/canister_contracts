@@ -71,6 +71,6 @@ service : {
     "getLockers": () -> (vec principal) query;
     "getCustodians": () -> (vec principal) query;
     "getValidators": () -> (vec principal) query;
-    "clearRecivedMessage": (vec text) -> (Result);
+    "clearReceivedMessage": (vec text) -> (Result);
     "clearSentMessage": (vec text) -> (Result);
 }

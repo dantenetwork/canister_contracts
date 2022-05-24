@@ -553,7 +553,7 @@ enum MapKey {
 type Result<T = bool, E = Error> = StdResult<T, E>;
 
 // for debug
-#[update(name = "clearRecivedMessage")]
+#[update(name = "clearReceivedMessage")]
 fn clear_received_message(chains: Vec<String>) -> Result {
     STATE.with(|state| {
         let mut state = state.borrow_mut();

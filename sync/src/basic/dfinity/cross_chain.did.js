@@ -21,12 +21,14 @@ const idlFactory = ({ IDL }) => {
     'data' : IDL.Text,
   });
   const Sqos = IDL.Record({ 'reveal' : IDL.Nat8 });
+  const Session = IDL.Record({ 'id' : IDL.Nat64, 'res_type' : IDL.Nat8 });
   const Message = IDL.Record({
     'content' : Content,
     'to_chain' : IDL.Text,
     'sqos' : Sqos,
     'from_chain' : IDL.Text,
     'sender' : IDL.Text,
+    'session' : Session,
     'signer' : IDL.Text,
   });
   const PendingMessage = IDL.Record({
@@ -34,12 +36,14 @@ const idlFactory = ({ IDL }) => {
     'validators' : IDL.Vec(IDL.Principal),
   });
   return IDL.Service({
+    'clearRecivedMessage' : IDL.Func([IDL.Vec(IDL.Text)], [Result], []),
+    'clearSentMessage' : IDL.Func([IDL.Vec(IDL.Text)], [Result], []),
     'executeMessage' : IDL.Func([IDL.Text, IDL.Nat64], [Result], []),
     'getCustodians' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
     'getExecutableMessage' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(MapKey, Message))],
-        [],
+        ['query'],
       ),
     'getFinalReceivedMessageId' : IDL.Func(
         [IDL.Text, IDL.Principal],
@@ -48,6 +52,11 @@ const idlFactory = ({ IDL }) => {
       ),
     'getLatestMessageId' : IDL.Func([IDL.Text], [IDL.Nat64], ['query']),
     'getLockers' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
+    'getMsgPortingTask' : IDL.Func(
+        [IDL.Text, IDL.Principal],
+        [IDL.Nat64],
+        ['query'],
+      ),
     'getPendingMessage' : IDL.Func(
         [],
         [
@@ -61,17 +70,19 @@ const idlFactory = ({ IDL }) => {
         [],
         [IDL.Vec(IDL.Tuple(MapKey, Message))],
         ['query'],
-    ),
-    'getSentMessageById': IDL.Func([IDL.Text, IDL.Nat64], [Message], ['query']),
+      ),
+    'getSentMessageById' : IDL.Func(
+        [IDL.Text, IDL.Nat64],
+        [Message],
+        ['query'],
+      ),
     'getSentMessageCount' : IDL.Func([IDL.Text], [IDL.Nat64], ['query']),
     'getValidators' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
     'receiveMessage' : IDL.Func([IDL.Nat64, Message], [Result], []),
-    'registerLocker': IDL.Func([IDL.Principal], [Result], []),
-    'registerValidator' : IDL.Func([], [Result], []),
-    'unRegisterValidator' : IDL.Func([], [Result], []),
-    'sendMessage': IDL.Func([IDL.Text, Content], [], []),
-    'getMsgPortingTask': IDL.Func([IDL.Text, IDL.Principal], [IDL.Nat64], ['query']),
-    'clearRecivedMessage': IDL.Func([IDL.Vec(IDL.Text)], [], []),
+    'registerLocker' : IDL.Func([IDL.Principal], [Result], []),
+    'registerValidator' : IDL.Func([IDL.Principal], [Result], []),
+    'sendMessage' : IDL.Func([IDL.Text, Content, Session], [], []),
+    'unRegisterValidator' : IDL.Func([IDL.Principal], [Result], []),
   });
 };
 const init = ({ IDL }) => { return []; };

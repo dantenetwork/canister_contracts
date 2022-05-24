@@ -42,7 +42,7 @@
       "validatorPublicKey": "ed25519:4rAo1M3BjosotXfKn9fKBEern3999WMoyXiZLNTS8agf",
       "walletUrl": "https://wallet.testnet.near.org",
       "helperUrl": "https://helper.testnet.near.org",
-      "crossChainContractAddress": "d-hub.testnet",
+      "crossChainContractAddress": "397c0049570d91f326b9bfbf24ee1e9779b14d79295a3b4b5b8833f887faa942",
       "receiveChains": ["DFINITY"],
       "compatibleChain": "near"
     },
@@ -57,8 +57,8 @@
     // },
     "DFINITY": {
       "network": "http://127.0.0.1:8000",
-      "validatorPrincipal": "bimmb-f7wlm-n54ph-d4ems-mlfay-fyhsj-efxdg-2xotg-txngs-ywbwg-iae",
-      "validatorPrivateKey": "6cd4af9d666d02de4276b81b3cfbaca4ce6cd8e379f06a911bf68311748250b3a74902820028413a6cc7d7afe4f0f22fd2779a5dd66dd78e68e843916a4ec5e4",
+      "validatorPrincipal": "gxxpe-khuyk-q6a55-3jpqk-yazsq-sycog-n7wpf-mrc4h-btbm2-kj65s-gqe",
+      "validatorPrivateKey": "478d76e0d3f32b8e016e6f2b67c82bc262fba794c2ade0936f3648d210decd81ccb844fca069e133dea863147657612ba6b751bc48cbdf7a56768665e07183ab",
       "compatibleChain": "dfinity",
       "canisterId": "rrkah-fqaaa-aaaaa-aaaaq-cai",
       "receiveChains": ["NEAR"]

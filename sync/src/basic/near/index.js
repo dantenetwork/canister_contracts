@@ -106,6 +106,7 @@ class NearHandler {
   // push message to Near
   async pushMessage(crossChainMessage) {
     const content = crossChainMessage[6];
+    const session = crossChainMessage[7];
     const args = {
       id: crossChainMessage[0], // message id
       from_chain: crossChainMessage[1], // from chain name
@@ -118,6 +119,10 @@ class NearHandler {
         action: content[1], // contract action name
         data: content[2], // contract data
       },
+      session: {
+        res_type: session[0],
+        id: session[1],
+      }
     }
     console.log('Push message', args);
     await this.pushTransaction("receive_message", args);
