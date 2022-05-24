@@ -15,8 +15,21 @@ async function sendMessage(fromChain, toChain) {
   if (nextMessageId <= nearMessageCount) {
     let message = await fromHandler.getSentMessageById(toChain, Number(nextMessageId));
     message.sqos = { reveal: 1 };
+    message.session = getSession(message.session);
     await toHandler.pushMessage(nextMessageId, message);
   }
+}
+
+function getSession(session) {
+  if (!session) {
+    session = {
+      res_type: 0,
+      id: 0
+    }
+  } else {
+    session.id = session.id ? session.id : 0;
+  }
+  return session;
 }
 
 module.exports = {
