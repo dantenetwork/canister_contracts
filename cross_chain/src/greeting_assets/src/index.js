@@ -13,8 +13,10 @@ document.querySelector("form").addEventListener("submit", async (e) => {
 
   // Interact with foo actor, calling the greet method
   try {
-    const greet = await greeting.sendGreeting(name, title, content, Date.toString());
-    document.getElementById("greeting").innerText = greet;
+    let date = (new Date()).toISOString();
+    const greet = await greeting.sendGreeting(name, title, content, date);
+    console.log(date, greet);
+    document.getElementById("greeting").innerText = greet.Ok;
   } catch (e) {
     document.getElementById("greeting").innerText = e;
   }

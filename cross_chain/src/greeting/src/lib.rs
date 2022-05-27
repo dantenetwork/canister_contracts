@@ -37,7 +37,7 @@ struct DstContract {
 
 #[derive(CandidType, Deserialize, Default, Clone)]
 struct State {
-    custodians: HashSet<Principal>,
+    custodians: Option<Principal>,
     cross_chain_canister: Option<Principal>,
     greeting_data: HashMap<String, Greeting>,
     destination_contract: HashMap<String, HashMap<String, DstContract>>,
@@ -49,10 +49,10 @@ thread_local! {
 }
 
 #[init]
-fn int() {
+fn init() {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
-        state.custodians = HashSet::from([api::caller()]);
+        state.custodians = Some(api::caller());
     })
 }
 
@@ -197,8 +197,9 @@ async fn send_greeting(
 fn set_cross_chain_canister(cross_chain_canister: Principal) {
     STATE.with(|state| {
         let mut state = state.borrow_mut();
-        assert!(
-            state.custodians.contains(&api::caller()),
+        assert_eq!(
+            state.custodians.unwrap(),
+            api::caller(),
             "Only call by custodian"
         );
         state.cross_chain_canister = Some(cross_chain_canister);
