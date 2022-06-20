@@ -1,0 +1,23 @@
+{
+  "networks": {
+    "NEAR": {
+      "networkId": "testnet",
+      "nodeUrl": "https://rpc.testnet.near.org",
+      "validatorAccountId": "b6c3492e2696c4da8f7a154d6b4c67233eed5ada1da57cfa59f4fc001ce20207",
+      "validatorPublicKey": "ed25519:DJRuwekPKM4hbnr5ETNEfQpGnTohf6THWbzGQrM5vRpz",
+      "walletUrl": "https://wallet.testnet.near.org",
+      "helperUrl": "https://helper.testnet.near.org",
+      "crossChainContractAddress": "397c0049570d91f326b9bfbf24ee1e9779b14d79295a3b4b5b8833f887faa942",
+      "receiveChains": ["DFINITY"],
+      "compatibleChain": "near"
+    },
+    "DFINITY": {
+      "network": "http://127.0.0.1:8000",
+      "validatorPrincipal": "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxx",
+      "validatorPrivateKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "compatibleChain": "dfinity",
+      "canisterId": "rrkah-fqaaa-aaaaa-aaaaq-cai",
+      "receiveChains": ["NEAR"]
+    }
+  }
+}

@@ -11,10 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "@dfinity/agent": "^0.11.0",
+    "@dfinity/candid": "^0.11.3",
     "@dfinity/identity": "^0.11.1",
     "@dfinity/principal": "^0.11.0",
     "config": "^3.3.6",
-    "eth-web3": "npm:web3@^1.6.1",
     "fs": "0.0.1-security",
     "near-api-js": "^0.43.1",
     "os": "^0.1.2",
