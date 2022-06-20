@@ -3,7 +3,7 @@
 Canister Smart contracts that provide some of the basic functions of the dante cross chain service.
 
 ## Currently 
-This is the starting work for World-Tree protocol stack implemention for ICP.
+This is the starting work for the World-Tree protocol stack for ICP.
 
 We have completed following abilities:
 * Basic message protocol for ICP
