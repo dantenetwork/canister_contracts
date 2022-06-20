@@ -1,5 +1,24 @@
 {
   "networks": {
+    // "AVALANCHE": {
+    //   "nodeAddress": "https://api.avax-test.network/ext/bc/C/rpc",
+    //   "crossChainContractAddress": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    //   "validatorPrivateKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    //   "validatorPublicKey": "",
+    //   "abiPath": "./TwoPhaseCommitCrossChain.json",
+    //   "compatibleChain": "ethereum",
+    //   "receiveChains": ["PlatONEVMDEV", "NEAR"],
+    //   "chainId": 43113
+    // },
+    // "RINKEBY": {
+    //   "nodeAddress": "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+    //   "crossChainContractAddress": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    //   "validatorPrivateKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    //   "abiPath": "./TwoPhaseCommitCrossChain.json",
+    //   "compatibleChain": "ethereum",
+    //   "receiveChains": ["NEAR"],
+    //   "chainId": 4
+    // },
     "NEAR": {
       "networkId": "testnet",
       "nodeUrl": "https://rpc.testnet.near.org",
