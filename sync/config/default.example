@@ -7,7 +7,7 @@
     //   "validatorPublicKey": "",
     //   "abiPath": "./TwoPhaseCommitCrossChain.json",
     //   "compatibleChain": "ethereum",
-    //   "receiveChains": ["PlatONEVMDEV", "NEAR"],
+    //   "receiveChains": ["DFINITY", "NEAR"],
     //   "chainId": 43113
     // },
     // "RINKEBY": {
